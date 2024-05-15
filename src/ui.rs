@@ -55,21 +55,18 @@ pub fn display_side_panel(app: &mut TxtEditorApp, ctx: &Context) {
 
 pub fn display_central_panel(app: &mut TxtEditorApp, ctx: &Context) {
     CentralPanel::default().show(ctx, |ui| {
-        if let Some(ref selected_file) = app.selected_file {
-            ui.vertical(|ui| {
-                ui.label(format!("Selected File: {}", selected_file.display()));
-                ScrollArea::vertical().show(ui, |ui| {
-                    let response = ui.add(
-                        TextEdit::multiline(&mut app.file_contents)
-                            .font(egui::TextStyle::Monospace)
-                            .desired_rows(30) // 固定の行数を設定
-                            .desired_width(f32::INFINITY), // 横幅を最大化
-                    );
+        if let Some(_) = app.selected_file {
+            ScrollArea::vertical().show(ui, |ui| {
+                let response = ui.add(
+                    TextEdit::multiline(&mut app.file_contents)
+                        .font(egui::TextStyle::Monospace)
+                        .desired_rows(30) // 固定の行数を設定
+                        .desired_width(f32::INFINITY), // 横幅を最大化
+                );
 
-                    if response.changed() {
-                        app.file_modified = true; // テキストが変更されたときにフラグを設定する
-                    }
-                });
+                if response.changed() {
+                    app.file_modified = true; // テキストが変更されたときにフラグを設定する
+                }
             });
         }
     });
