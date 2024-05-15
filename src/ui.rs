@@ -22,6 +22,10 @@ pub fn display_top_panel(app: &mut TxtEditorApp, ctx: &Context) {
                         .collect();
                 }
             }
+
+            // 文字数をカウントして表示
+            let char_count = app.file_contents.chars().count();
+            ui.label(format!("Character count: {}", char_count));
         });
     });
 }
