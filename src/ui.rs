@@ -23,10 +23,46 @@ pub fn display_top_panel(app: &mut TxtEditorApp, ctx: &Context) {
                 }
             }
 
+            if ui.button("text").clicked() {
+                if let Some(folder_path) = &app.folder_path {
+                    let new_file_name = "new_file";
+                    let new_file_path = folder_path.join(format!("{}.txt", new_file_name));
+                    std::fs::File::create(&new_file_path).expect("Failed to create file");
+                    app.file_list.push(new_file_path.clone());
+                    app.new_file_popup = true;
+                    app.new_file_path = Some(new_file_path);
+                    app.new_file_name = new_file_name.to_string(); // Initialize with the default name
+                }
+            }
+
             // 文字数をカウントして表示
             let char_count = app.file_contents.chars().count();
             ui.label(format!("Character count: {}", char_count));
         });
+
+        if app.new_file_popup {
+            egui::Window::new("Rename File").show(ctx, |ui| {
+                ui.label("Enter new file name:");
+                ui.text_edit_singleline(&mut app.new_file_name);
+
+                if ui.button("Rename").clicked() {
+                    if let Some(new_file_path) = &app.new_file_path {
+                        let parent_dir = new_file_path
+                            .parent()
+                            .expect("Failed to get parent directory");
+                        let new_path = parent_dir.join(&app.new_file_name);
+                        std::fs::rename(new_file_path, &new_path).expect("Failed to rename file");
+                        app.file_list.pop();
+                        app.file_list.push(new_path);
+                    }
+                    app.new_file_popup = false;
+                }
+
+                if ui.button("Cancel").clicked() {
+                    app.new_file_popup = false;
+                }
+            });
+        }
     });
 }
 

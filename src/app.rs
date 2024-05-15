@@ -10,7 +10,10 @@ pub struct TxtEditorApp {
     pub file_contents: String,
     pub font_size: f32,
     pub fonts_set: bool,
-    pub file_modified: bool, // ファイルが編集されたかどうかを示すフラグ
+    pub file_modified: bool,
+    pub new_file_popup: bool,
+    pub new_file_name: String,
+    pub new_file_path: Option<PathBuf>, // 新しいフィールドを追加
 }
 
 impl Default for TxtEditorApp {
@@ -23,6 +26,9 @@ impl Default for TxtEditorApp {
             font_size: 16.0,
             fonts_set: false,
             file_modified: false,
+            new_file_popup: false,
+            new_file_name: String::new(),
+            new_file_path: None, // 新しいフィールドを追加
         }
     }
 }
