@@ -97,6 +97,7 @@ impl App for TxtEditorApp {
         self.save_file_if_modified();
 
         crate::ui::display_top_panel(self, ctx);
+        crate::ui::display_side_panel(self, ctx); // サイドパネルを追加
         crate::ui::display_central_panel(self, ctx);
     }
 }

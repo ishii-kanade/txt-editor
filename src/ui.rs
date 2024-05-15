@@ -1,5 +1,5 @@
 use crate::app::TxtEditorApp;
-use eframe::egui::{self, CentralPanel, Context, TextEdit, TopBottomPanel};
+use eframe::egui::{self, CentralPanel, Context, Layout, SidePanel, TextEdit, TopBottomPanel};
 use std::fs;
 
 pub fn display_top_panel(app: &mut TxtEditorApp, ctx: &Context) {
@@ -26,8 +26,8 @@ pub fn display_top_panel(app: &mut TxtEditorApp, ctx: &Context) {
     });
 }
 
-pub fn display_central_panel(app: &mut TxtEditorApp, ctx: &Context) {
-    CentralPanel::default().show(ctx, |ui| {
+pub fn display_side_panel(app: &mut TxtEditorApp, ctx: &Context) {
+    SidePanel::left("side_panel").show(ctx, |ui| {
         if let Some(ref folder_path) = app.folder_path {
             ui.label(format!("Directory: {}", folder_path.display()));
             ui.separator();
@@ -44,19 +44,25 @@ pub fn display_central_panel(app: &mut TxtEditorApp, ctx: &Context) {
                 }
             }
         }
+    });
+}
 
+pub fn display_central_panel(app: &mut TxtEditorApp, ctx: &Context) {
+    CentralPanel::default().show(ctx, |ui| {
         if let Some(ref selected_file) = app.selected_file {
-            ui.separator();
-            ui.label(format!("Selected File: {}", selected_file.display()));
-            let response = ui.add(
-                TextEdit::multiline(&mut app.file_contents)
-                    .font(egui::TextStyle::Monospace)
-                    .desired_rows(10),
-            );
+            ui.vertical(|ui| {
+                ui.label(format!("Selected File: {}", selected_file.display()));
+                let response = ui.add(
+                    TextEdit::multiline(&mut app.file_contents)
+                        .font(egui::TextStyle::Monospace)
+                        .desired_rows(30) // テキストエディットエリアの行数を増やす
+                        .desired_width(f32::INFINITY), // 横幅を最大化
+                );
 
-            if response.changed() {
-                app.file_modified = true; // テキストが変更されたときにフラグを設定する
-            }
+                if response.changed() {
+                    app.file_modified = true; // テキストが変更されたときにフラグを設定する
+                }
+            });
         }
     });
 }
