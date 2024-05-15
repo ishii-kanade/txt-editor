@@ -1,5 +1,6 @@
 use eframe::egui::{Context, FontData, FontDefinitions, FontFamily, FontId, TextStyle};
 use eframe::App;
+use std::fs;
 use std::path::PathBuf;
 
 pub struct TxtEditorApp {
@@ -9,6 +10,7 @@ pub struct TxtEditorApp {
     pub file_contents: String,
     pub font_size: f32,
     pub fonts_set: bool,
+    pub file_modified: bool, // ファイルが編集されたかどうかを示すフラグ
 }
 
 impl Default for TxtEditorApp {
@@ -20,6 +22,7 @@ impl Default for TxtEditorApp {
             file_contents: String::new(),
             font_size: 16.0,
             fonts_set: false,
+            file_modified: false,
         }
     }
 }
@@ -71,6 +74,18 @@ impl TxtEditorApp {
         ctx.set_style(style);
         self.fonts_set = true;
     }
+
+    fn save_file_if_modified(&mut self) {
+        if self.file_modified {
+            if let Some(ref selected_file) = self.selected_file {
+                if let Err(err) = fs::write(selected_file, &self.file_contents) {
+                    eprintln!("Failed to save file: {}", err);
+                } else {
+                    self.file_modified = false;
+                }
+            }
+        }
+    }
 }
 
 impl App for TxtEditorApp {
@@ -78,6 +93,8 @@ impl App for TxtEditorApp {
         if !self.fonts_set {
             self.set_custom_fonts(ctx);
         }
+
+        self.save_file_if_modified();
 
         crate::ui::display_top_panel(self, ctx);
         crate::ui::display_central_panel(self, ctx);

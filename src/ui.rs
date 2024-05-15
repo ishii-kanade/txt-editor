@@ -40,6 +40,7 @@ pub fn display_central_panel(app: &mut TxtEditorApp, ctx: &Context) {
                     app.selected_file = Some(file.clone());
                     app.file_contents = fs::read_to_string(file)
                         .unwrap_or_else(|_| "Failed to read file".to_string());
+                    app.file_modified = false; // ファイルを選択したときは未編集とする
                 }
             }
         }
@@ -47,11 +48,15 @@ pub fn display_central_panel(app: &mut TxtEditorApp, ctx: &Context) {
         if let Some(ref selected_file) = app.selected_file {
             ui.separator();
             ui.label(format!("Selected File: {}", selected_file.display()));
-            ui.add(
+            let response = ui.add(
                 TextEdit::multiline(&mut app.file_contents)
                     .font(egui::TextStyle::Monospace)
                     .desired_rows(10),
             );
+
+            if response.changed() {
+                app.file_modified = true; // テキストが変更されたときにフラグを設定する
+            }
         }
     });
 }
