@@ -1,5 +1,5 @@
 use crate::app::TxtEditorApp;
-use eframe::egui::{self, CentralPanel, Context, ScrollArea, TextEdit, TopBottomPanel};
+use eframe::egui::{self, CentralPanel, Color32, Context, ScrollArea, TextEdit, TopBottomPanel};
 use std::fs;
 
 pub fn display_top_panel(app: &mut TxtEditorApp, ctx: &Context) {
@@ -33,10 +33,16 @@ pub fn display_side_panel(app: &mut TxtEditorApp, ctx: &Context) {
             ui.separator();
 
             for file in &app.file_list {
-                if ui
-                    .selectable_label(false, file.file_name().unwrap().to_string_lossy())
-                    .clicked()
-                {
+                let file_name = file.file_name().unwrap().to_string_lossy();
+                let is_selected = Some(file) == app.selected_file.as_ref();
+
+                let label = if is_selected {
+                    ui.colored_label(Color32::YELLOW, file_name)
+                } else {
+                    ui.label(file_name)
+                };
+
+                if label.clicked() {
                     app.selected_file = Some(file.clone());
                     app.file_contents = fs::read_to_string(file)
                         .unwrap_or_else(|_| "Failed to read file".to_string());
