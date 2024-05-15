@@ -42,7 +42,7 @@ pub fn display_top_panel(app: &mut TxtEditorApp, ctx: &Context) {
 
         if app.new_file_popup {
             egui::Window::new("Rename File").show(ctx, |ui| {
-                ui.label("Enter new file name:");
+                ui.label("Enter new file name (without extension):");
                 ui.text_edit_singleline(&mut app.new_file_name);
 
                 if ui.button("Rename").clicked() {
@@ -50,7 +50,7 @@ pub fn display_top_panel(app: &mut TxtEditorApp, ctx: &Context) {
                         let parent_dir = new_file_path
                             .parent()
                             .expect("Failed to get parent directory");
-                        let new_path = parent_dir.join(&app.new_file_name);
+                        let new_path = parent_dir.join(format!("{}.txt", app.new_file_name));
                         std::fs::rename(new_file_path, &new_path).expect("Failed to rename file");
                         app.file_list.pop();
                         app.file_list.push(new_path);
