@@ -1,6 +1,6 @@
 use crate::app::TxtEditorApp;
 use eframe::egui::{
-    self, CentralPanel, Color32, Context, Key, ScrollArea, TextEdit, TopBottomPanel,
+    self, CentralPanel, Color32, Context, Key, Modifiers, ScrollArea, TextEdit, TopBottomPanel,
 };
 use std::fs;
 use std::path::PathBuf;
@@ -16,7 +16,9 @@ pub fn display_top_panel(app: &mut TxtEditorApp, ctx: &Context) {
                 }
             }
 
-            let add_file_shortcut = ctx.input(|i| i.key_pressed(Key::A) && i.modifiers.command);
+            // Control+A ショートカットをファイル追加に割り当てる
+            let add_file_shortcut =
+                ctx.input(|i| i.key_pressed(Key::A) && i.modifiers == Modifiers::CTRL);
             if ui.button("Add Text File").clicked() || add_file_shortcut {
                 if let Some(folder_path) = &app.folder_path {
                     let new_file_name = "new_file";
