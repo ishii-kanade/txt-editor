@@ -1,5 +1,5 @@
 use crate::app::TxtEditorApp;
-use eframe::egui::{self, CentralPanel, Color32, Context, ScrollArea, TextEdit, TopBottomPanel};
+use eframe::egui::{self, CentralPanel, Color32, Context, Key, ScrollArea, TextEdit, TopBottomPanel};
 use std::fs;
 
 pub fn display_top_panel(app: &mut TxtEditorApp, ctx: &Context) {
@@ -23,7 +23,8 @@ pub fn display_top_panel(app: &mut TxtEditorApp, ctx: &Context) {
                 }
             }
 
-            if ui.button("Add Text File").clicked() {
+            let add_file_shortcut = ctx.input(|i| i.key_pressed(Key::A) && i.modifiers.command);
+            if ui.button("Add Text File").clicked() || add_file_shortcut {
                 if let Some(folder_path) = &app.folder_path {
                     let new_file_name = "new_file";
                     let new_file_path = folder_path.join(format!("{}.txt", new_file_name));
@@ -35,8 +36,9 @@ pub fn display_top_panel(app: &mut TxtEditorApp, ctx: &Context) {
                 }
             }
 
+            let delete_file_shortcut = ctx.input(|i| i.key_pressed(Key::Delete));
             if let Some(ref selected_file) = app.selected_file {
-                if ui.button("Delete").clicked() {
+                if ui.button("Delete").clicked() || delete_file_shortcut {
                     if let Err(err) = fs::remove_file(selected_file) {
                         eprintln!("Failed to delete file: {}", err);
                     } else {
