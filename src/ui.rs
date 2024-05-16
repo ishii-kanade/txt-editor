@@ -23,7 +23,7 @@ pub fn display_top_panel(app: &mut TxtEditorApp, ctx: &Context) {
                 }
             }
 
-            if ui.button("text").clicked() {
+            if ui.button("Add Text File").clicked() {
                 if let Some(folder_path) = &app.folder_path {
                     let new_file_name = "new_file";
                     let new_file_path = folder_path.join(format!("{}.txt", new_file_name));
@@ -32,6 +32,18 @@ pub fn display_top_panel(app: &mut TxtEditorApp, ctx: &Context) {
                     app.new_file_popup = true;
                     app.new_file_path = Some(new_file_path);
                     app.new_file_name = new_file_name.to_string(); // Initialize with the default name
+                }
+            }
+
+            if let Some(ref selected_file) = app.selected_file {
+                if ui.button("Delete").clicked() {
+                    if let Err(err) = fs::remove_file(selected_file) {
+                        eprintln!("Failed to delete file: {}", err);
+                    } else {
+                        app.file_list.retain(|f| f != selected_file);
+                        app.selected_file = None;
+                        app.file_contents.clear();
+                    }
                 }
             }
 
