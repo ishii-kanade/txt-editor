@@ -1,6 +1,9 @@
 use crate::app::TxtEditorApp;
-use eframe::egui::{self, CentralPanel, Color32, Context, Key, ScrollArea, TextEdit, TopBottomPanel};
+use eframe::egui::{
+    self, CentralPanel, Color32, Context, Key, ScrollArea, TextEdit, TopBottomPanel,
+};
 use std::fs;
+use std::path::PathBuf; // PathBuf をインポート
 
 pub fn display_top_panel(app: &mut TxtEditorApp, ctx: &Context) {
     TopBottomPanel::top("top_panel").show(ctx, |ui| {
@@ -8,18 +11,7 @@ pub fn display_top_panel(app: &mut TxtEditorApp, ctx: &Context) {
             if ui.button("Select Folder").clicked() {
                 if let Some(path) = rfd::FileDialog::new().pick_folder() {
                     app.folder_path = Some(path.clone());
-                    app.file_list = fs::read_dir(path)
-                        .unwrap()
-                        .filter_map(Result::ok)
-                        .filter(|entry| {
-                            entry
-                                .path()
-                                .extension()
-                                .map(|ext| ext == "txt")
-                                .unwrap_or(false)
-                        })
-                        .map(|entry| entry.path())
-                        .collect();
+                    app.file_list = get_txt_files_in_directory(path);
                 }
             }
 
@@ -29,14 +21,15 @@ pub fn display_top_panel(app: &mut TxtEditorApp, ctx: &Context) {
                     let new_file_name = "new_file";
                     let new_file_path = folder_path.join(format!("{}.txt", new_file_name));
                     std::fs::File::create(&new_file_path).expect("Failed to create file");
-                    app.file_list.push(new_file_path.clone());
                     app.new_file_popup = true;
                     app.new_file_path = Some(new_file_path);
                     app.new_file_name = new_file_name.to_string(); // Initialize with the default name
+                    app.file_list = get_txt_files_in_directory(folder_path.clone());
+                    // ファイルリストを更新
                 }
             }
 
-            let delete_file_shortcut = ctx.input(|i| i.key_pressed(Key::Delete));
+            let delete_file_shortcut = ctx.input(|i| i.key_pressed(Key::Backspace));
             if let Some(ref selected_file) = app.selected_file {
                 if ui.button("Delete").clicked() || delete_file_shortcut {
                     if let Err(err) = fs::remove_file(selected_file) {
@@ -45,6 +38,10 @@ pub fn display_top_panel(app: &mut TxtEditorApp, ctx: &Context) {
                         app.file_list.retain(|f| f != selected_file);
                         app.selected_file = None;
                         app.file_contents.clear();
+                        if let Some(folder_path) = &app.folder_path {
+                            app.file_list = get_txt_files_in_directory(folder_path.clone());
+                            // ファイルリストを更新
+                        }
                     }
                 }
             }
@@ -68,6 +65,10 @@ pub fn display_top_panel(app: &mut TxtEditorApp, ctx: &Context) {
                         std::fs::rename(new_file_path, &new_path).expect("Failed to rename file");
                         app.file_list.pop();
                         app.file_list.push(new_path);
+                        if let Some(folder_path) = &app.folder_path {
+                            app.file_list = get_txt_files_in_directory(folder_path.clone());
+                            // ファイルリストを更新
+                        }
                     }
                     app.new_file_popup = false;
                 }
@@ -124,4 +125,19 @@ pub fn display_central_panel(app: &mut TxtEditorApp, ctx: &Context) {
             });
         }
     });
+}
+
+fn get_txt_files_in_directory(path: PathBuf) -> Vec<PathBuf> {
+    fs::read_dir(path)
+        .unwrap()
+        .filter_map(Result::ok)
+        .filter(|entry| {
+            entry
+                .path()
+                .extension()
+                .map(|ext| ext == "txt")
+                .unwrap_or(false)
+        })
+        .map(|entry| entry.path())
+        .collect()
 }
