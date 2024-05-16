@@ -3,7 +3,8 @@ use eframe::egui::{
     self, CentralPanel, Color32, Context, Key, ScrollArea, TextEdit, TopBottomPanel,
 };
 use std::fs;
-use std::path::PathBuf; // PathBuf をインポート
+use std::path::PathBuf;
+use std::process::Command;
 
 pub fn display_top_panel(app: &mut TxtEditorApp, ctx: &Context) {
     TopBottomPanel::top("top_panel").show(ctx, |ui| {
@@ -29,11 +30,11 @@ pub fn display_top_panel(app: &mut TxtEditorApp, ctx: &Context) {
                 }
             }
 
-            let delete_file_shortcut = ctx.input(|i| i.key_pressed(Key::Backspace));
+            let delete_file_shortcut = ctx.input(|i| i.key_pressed(Key::Delete));
             if let Some(ref selected_file) = app.selected_file {
                 if ui.button("Delete").clicked() || delete_file_shortcut {
-                    if let Err(err) = fs::remove_file(selected_file) {
-                        eprintln!("Failed to delete file: {}", err);
+                    if let Err(err) = move_to_trash(selected_file) {
+                        eprintln!("Failed to move file to trash: {}", err);
                     } else {
                         app.file_list.retain(|f| f != selected_file);
                         app.selected_file = None;
@@ -140,4 +141,42 @@ fn get_txt_files_in_directory(path: PathBuf) -> Vec<PathBuf> {
         })
         .map(|entry| entry.path())
         .collect()
+}
+
+fn move_to_trash(path: &PathBuf) -> Result<(), String> {
+    let path_str = path
+        .to_str()
+        .ok_or_else(|| "Failed to convert path to string".to_string())?;
+
+    #[cfg(target_os = "windows")]
+    {
+        Command::new("cmd")
+            .args(&["/C", "move", path_str, "%USERPROFILE%\\Recycle Bin"])
+            .output()
+            .map_err(|e| format!("Failed to move file to trash: {}", e))?;
+    }
+
+    #[cfg(target_os = "macos")]
+    {
+        Command::new("osascript")
+            .args(&[
+                "-e",
+                &format!(
+                    "tell application \"Finder\" to delete POSIX file \"{}\"",
+                    path_str
+                ),
+            ])
+            .output()
+            .map_err(|e| format!("Failed to move file to trash: {}", e))?;
+    }
+
+    #[cfg(target_os = "linux")]
+    {
+        Command::new("gio")
+            .args(&["trash", path_str])
+            .output()
+            .map_err(|e| format!("Failed to move file to trash: {}", e))?;
+    }
+
+    Ok(())
 }
