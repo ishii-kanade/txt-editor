@@ -1,7 +1,10 @@
+// ui.rs
+
 use crate::app::TxtEditorApp;
 use crate::file_operations::{get_txt_files_in_directory, move_to_trash};
 use eframe::egui::{
-    self, CentralPanel, Color32, Context, Key, Modifiers, ScrollArea, TextEdit, TopBottomPanel,
+    self, CentralPanel, Color32, Context, Key, Label, Modifiers, Response, RichText, ScrollArea,
+    Sense, TextEdit, TopBottomPanel,
 };
 
 pub fn display_top_panel(app: &mut TxtEditorApp, ctx: &Context) {
@@ -88,9 +91,11 @@ pub fn display_side_panel(app: &mut TxtEditorApp, ctx: &Context) {
             ui.label(format!("Directory: {}", folder_path.display()));
             ui.separator();
 
-            for file in &app.file_list {
+            // ファイルリストを借用しているスコープを短くするために一時的なベクターを使用
+            let files: Vec<_> = app.file_list.iter().cloned().collect();
+            for file in files {
                 let file_name = file.file_name().unwrap().to_string_lossy();
-                let is_selected = Some(file) == app.selected_file.as_ref();
+                let is_selected = Some(&file) == app.selected_file.as_ref();
 
                 let label = if is_selected {
                     ui.colored_label(Color32::YELLOW, file_name)
@@ -98,12 +103,43 @@ pub fn display_side_panel(app: &mut TxtEditorApp, ctx: &Context) {
                     ui.label(file_name)
                 };
 
+                // 左クリックでファイルを選択
                 if label.clicked() {
                     app.selected_file = Some(file.clone());
-                    app.file_contents = std::fs::read_to_string(file)
+                    app.file_contents = std::fs::read_to_string(&file)
                         .unwrap_or_else(|_| "Failed to read file".to_string());
                     app.file_modified = false; // ファイルを選択したときは未編集とする
                 }
+
+                // 右クリックメニューを追加
+                label.context_menu(|ui| {
+                    if ui.button("Open in new window").clicked() {
+                        // 新しいウィンドウで開く処理をここに追加
+                        println!("Open {} in new window", file.display());
+                        ui.close_menu();
+                    }
+                    if ui.button("Rename").clicked() {
+                        // リネーム処理をここに追加
+                        println!("Rename {}", file.display());
+                        ui.close_menu();
+                    }
+                    if ui.button("Delete").clicked() {
+                        if let Err(err) = move_to_trash(&file) {
+                            eprintln!("Failed to move file to trash: {}", err);
+                        } else {
+                            app.file_list.retain(|f| f != &file);
+                            if app.selected_file == Some(file.clone()) {
+                                app.selected_file = None;
+                                app.file_contents.clear();
+                            }
+                            if let Some(folder_path) = &app.folder_path {
+                                app.file_list = get_txt_files_in_directory(folder_path.clone());
+                                // ファイルリストを更新
+                            }
+                        }
+                        ui.close_menu();
+                    }
+                });
             }
         }
     });
