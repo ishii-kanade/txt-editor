@@ -81,7 +81,7 @@ impl TxtEditorApp {
         self.fonts_set = true;
     }
 
-    fn save_file_if_modified(&mut self) {
+    pub fn save_file_if_modified(&mut self) {
         if self.file_modified {
             if let Some(ref selected_file) = self.selected_file {
                 if let Err(err) = fs::write(selected_file, &self.file_contents) {
@@ -103,7 +103,7 @@ impl App for TxtEditorApp {
         self.save_file_if_modified();
 
         crate::ui::display_top_panel(self, ctx);
-        crate::ui::display_side_panel(self, ctx); // サイドパネルを追加
+        crate::ui::display_side_panel(self, ctx);
         crate::ui::display_central_panel(self, ctx);
     }
 }
