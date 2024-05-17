@@ -1,8 +1,7 @@
 use crate::app::TxtEditorApp;
 use crate::file_operations::{get_txt_files_in_directory, move_to_trash};
 use eframe::egui::{
-    self, CentralPanel, Color32, Context, Key, Label, Modifiers, Response, RichText, ScrollArea,
-    Sense, TextEdit, TopBottomPanel,
+    self, CentralPanel, Color32, Context, Key, Modifiers, ScrollArea, TextEdit, TopBottomPanel,
 };
 
 pub fn display_top_panel(app: &mut TxtEditorApp, ctx: &Context) {
