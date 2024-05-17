@@ -112,8 +112,9 @@ pub fn display_side_panel(app: &mut TxtEditorApp, ctx: &Context) {
                 // 右クリックメニューを追加
                 label.context_menu(|ui| {
                     if ui.button("Open in new window").clicked() {
-                        // 新しいウィンドウで開く処理をここに追加
-                        println!("Open {} in new window", file.display());
+                        app.right_panel_file = Some(file.clone());
+                        app.right_panel_contents = std::fs::read_to_string(&file)
+                            .unwrap_or_else(|_| "Failed to read file".to_string());
                         ui.close_menu();
                     }
                     if ui.button("Rename").clicked() {
@@ -157,6 +158,21 @@ pub fn display_central_panel(app: &mut TxtEditorApp, ctx: &Context) {
                 if response.changed() {
                     app.file_modified = true; // テキストが変更されたときにフラグを設定する
                 }
+            });
+        }
+    });
+}
+
+pub fn display_right_panel(app: &mut TxtEditorApp, ctx: &Context) {
+    eframe::egui::SidePanel::right("right_panel").show(ctx, |ui| {
+        if let Some(_) = app.right_panel_file {
+            ScrollArea::vertical().show(ui, |ui| {
+                ui.add(
+                    TextEdit::multiline(&mut app.right_panel_contents)
+                        .font(egui::TextStyle::Monospace)
+                        .desired_rows(30)
+                        .desired_width(f32::INFINITY),
+                );
             });
         }
     });

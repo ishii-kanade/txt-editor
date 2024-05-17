@@ -13,7 +13,9 @@ pub struct TxtEditorApp {
     pub file_modified: bool,
     pub new_file_popup: bool,
     pub new_file_name: String,
-    pub new_file_path: Option<PathBuf>, // 新しいフィールドを追加
+    pub new_file_path: Option<PathBuf>,
+    pub right_panel_file: Option<PathBuf>, // 追加
+    pub right_panel_contents: String,      // 追加
 }
 
 impl Default for TxtEditorApp {
@@ -28,7 +30,9 @@ impl Default for TxtEditorApp {
             file_modified: false,
             new_file_popup: false,
             new_file_name: String::new(),
-            new_file_path: None, // 新しいフィールドを追加
+            new_file_path: None,
+            right_panel_file: None,              // 追加
+            right_panel_contents: String::new(), // 追加
         }
     }
 }
@@ -104,6 +108,7 @@ impl App for TxtEditorApp {
 
         crate::ui::display_top_panel(self, ctx);
         crate::ui::display_side_panel(self, ctx);
+        crate::ui::display_right_panel(self, ctx);
         crate::ui::display_central_panel(self, ctx);
     }
 }
