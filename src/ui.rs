@@ -1,5 +1,3 @@
-// ui.rs
-
 use crate::app::TxtEditorApp;
 use crate::file_operations::{get_txt_files_in_directory, move_to_trash};
 use eframe::egui::{
