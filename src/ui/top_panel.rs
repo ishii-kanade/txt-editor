@@ -61,32 +61,5 @@ pub fn display(app: &mut TxtEditorApp, ctx: &Context) {
             let char_count = app.file_contents.chars().count();
             ui.label(format!("Character count: {}", char_count));
         });
-
-        if app.new_file_popup {
-            egui::Window::new("Rename File").show(ctx, |ui| {
-                ui.label("Enter new file name (without extension):");
-                ui.text_edit_singleline(&mut app.new_file_name);
-
-                if ui.button("Rename").clicked() {
-                    if let Some(new_file_path) = &app.new_file_path {
-                        let parent_dir = new_file_path
-                            .parent()
-                            .expect("Failed to get parent directory");
-                        let new_path = parent_dir.join(format!("{}.txt", app.new_file_name));
-                        std::fs::rename(new_file_path, &new_path).expect("Failed to rename file");
-                        app.file_list.pop();
-                        app.file_list.push(new_path);
-                        if let Some(root_dir) = &app.folder_path {
-                            app.file_list = get_txt_files_and_dirs_in_directory(root_dir.clone());
-                        }
-                    }
-                    app.new_file_popup = false;
-                }
-
-                if ui.button("Cancel").clicked() {
-                    app.new_file_popup = false;
-                }
-            });
-        }
     });
 }

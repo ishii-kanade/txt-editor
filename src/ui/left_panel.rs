@@ -2,6 +2,7 @@ use crate::app::TxtEditorApp;
 use crate::file_operations::{get_txt_files_and_dirs_in_directory, move_to_trash};
 use eframe::egui::{self, CollapsingHeader, Color32, Context, SidePanel};
 use std::fs;
+use std::io;
 use std::path::PathBuf;
 
 fn display_directory(ui: &mut egui::Ui, path: &PathBuf, app: &mut TxtEditorApp) {
@@ -46,6 +47,12 @@ fn display_directory(ui: &mut egui::Ui, path: &PathBuf, app: &mut TxtEditorApp) 
                 }
                 ui.close_menu();
             }
+            if ui.button("Rename").clicked() {
+                app.rename_popup = true;
+                app.rename_target = Some(path.clone());
+                app.new_name = dir_name;
+                ui.close_menu();
+            }
         });
 
         if response.header_response.clicked() {
@@ -56,9 +63,9 @@ fn display_directory(ui: &mut egui::Ui, path: &PathBuf, app: &mut TxtEditorApp) 
         if !file_name.starts_with('.') {
             let is_selected = Some(path) == app.selected_file.as_ref();
             let label = if is_selected {
-                ui.colored_label(Color32::YELLOW, file_name)
+                ui.colored_label(Color32::YELLOW, file_name.clone())
             } else {
-                ui.label(file_name)
+                ui.label(file_name.clone())
             };
 
             if label.clicked() {
@@ -76,7 +83,9 @@ fn display_directory(ui: &mut egui::Ui, path: &PathBuf, app: &mut TxtEditorApp) 
                     ui.close_menu();
                 }
                 if ui.button("Rename").clicked() {
-                    println!("Rename {}", path.display());
+                    app.rename_popup = true;
+                    app.rename_target = Some(path.clone());
+                    app.new_name = file_name.clone();
                     ui.close_menu();
                 }
                 if ui.button("Delete").clicked() {
@@ -97,6 +106,12 @@ fn display_directory(ui: &mut egui::Ui, path: &PathBuf, app: &mut TxtEditorApp) 
             });
         }
     }
+}
+
+fn rename_item(path: &PathBuf, new_name: &str) -> io::Result<()> {
+    let new_path = path.with_file_name(new_name);
+    fs::rename(path, new_path)?;
+    Ok(())
 }
 
 pub fn display(app: &mut TxtEditorApp, ctx: &Context) {
@@ -130,6 +145,30 @@ pub fn display(app: &mut TxtEditorApp, ctx: &Context) {
                     }
                     if ui.button("Cancel").clicked() {
                         app.new_folder_popup = false;
+                    }
+                });
+            }
+
+            if app.rename_popup {
+                egui::Window::new("Rename").show(ctx, |ui| {
+                    ui.label("Enter new name:");
+                    ui.text_edit_singleline(&mut app.new_name);
+
+                    if ui.button("Rename").clicked() {
+                        if let Some(ref rename_target) = app.rename_target {
+                            if let Err(err) = rename_item(rename_target, &app.new_name) {
+                                eprintln!("Failed to rename item: {}", err);
+                            } else {
+                                if let Some(root_dir) = &app.folder_path {
+                                    app.file_list =
+                                        get_txt_files_and_dirs_in_directory(root_dir.clone());
+                                }
+                            }
+                        }
+                        app.rename_popup = false;
+                    }
+                    if ui.button("Cancel").clicked() {
+                        app.rename_popup = false;
                     }
                 });
             }
