@@ -110,7 +110,7 @@ pub fn display_side_panel(app: &mut TxtEditorApp, ctx: &Context) {
 
                 // 右クリックメニューを追加
                 label.context_menu(|ui| {
-                    if ui.button("Open in new window").clicked() {
+                    if ui.button("Open in RightPanel").clicked() {
                         app.right_panel_file = Some(file.clone());
                         app.right_panel_contents = std::fs::read_to_string(&file)
                             .unwrap_or_else(|_| "Failed to read file".to_string());
