@@ -1,8 +1,11 @@
 use crate::app::TxtEditorApp;
-use crate::file_operations::{get_txt_files_in_directory, move_to_trash};
+use crate::file_operations::{get_txt_files_and_dirs_in_directory, move_to_trash};
 use eframe::egui::{
-    self, CentralPanel, Color32, Context, Key, Modifiers, ScrollArea, TextEdit, TopBottomPanel,
+    self, CentralPanel, CollapsingHeader, Color32, Context, Key, Modifiers, ScrollArea, TextEdit,
+    TopBottomPanel,
 };
+use std::fs;
+use std::path::PathBuf;
 
 pub fn display_top_panel(app: &mut TxtEditorApp, ctx: &Context) {
     TopBottomPanel::top("top_panel").show(ctx, |ui| {
@@ -10,7 +13,8 @@ pub fn display_top_panel(app: &mut TxtEditorApp, ctx: &Context) {
             if ui.button("Select Folder").clicked() {
                 if let Some(path) = rfd::FileDialog::new().pick_folder() {
                     app.folder_path = Some(path.clone());
-                    app.file_list = get_txt_files_in_directory(path);
+                    app.selected_dir = Some(path.clone());
+                    app.file_list = get_txt_files_and_dirs_in_directory(path);
                 }
             }
 
@@ -18,14 +22,16 @@ pub fn display_top_panel(app: &mut TxtEditorApp, ctx: &Context) {
             let add_file_shortcut =
                 ctx.input(|i| i.key_pressed(Key::A) && i.modifiers == Modifiers::CTRL);
             if ui.button("Add Text File").clicked() || add_file_shortcut {
-                if let Some(folder_path) = &app.folder_path {
+                if let Some(selected_dir) = &app.selected_dir {
                     let new_file_name = "new_file";
-                    let new_file_path = folder_path.join(format!("{}.txt", new_file_name));
+                    let new_file_path = selected_dir.join(format!("{}.txt", new_file_name));
                     std::fs::File::create(&new_file_path).expect("Failed to create file");
                     app.new_file_popup = true;
                     app.new_file_path = Some(new_file_path);
                     app.new_file_name = new_file_name.to_string(); // Initialize with the default name
-                    app.file_list = get_txt_files_in_directory(folder_path.clone());
+                    if let Some(root_dir) = &app.folder_path {
+                        app.file_list = get_txt_files_and_dirs_in_directory(root_dir.clone());
+                    }
                     // ファイルリストを更新
                 }
             }
@@ -40,7 +46,8 @@ pub fn display_top_panel(app: &mut TxtEditorApp, ctx: &Context) {
                         app.selected_file = None;
                         app.file_contents.clear();
                         if let Some(folder_path) = &app.folder_path {
-                            app.file_list = get_txt_files_in_directory(folder_path.clone());
+                            app.file_list =
+                                get_txt_files_and_dirs_in_directory(folder_path.clone());
                             // ファイルリストを更新
                         }
                     }
@@ -66,10 +73,10 @@ pub fn display_top_panel(app: &mut TxtEditorApp, ctx: &Context) {
                         std::fs::rename(new_file_path, &new_path).expect("Failed to rename file");
                         app.file_list.pop();
                         app.file_list.push(new_path);
-                        if let Some(folder_path) = &app.folder_path {
-                            app.file_list = get_txt_files_in_directory(folder_path.clone());
-                            // ファイルリストを更新
+                        if let Some(root_dir) = &app.folder_path {
+                            app.file_list = get_txt_files_and_dirs_in_directory(root_dir.clone());
                         }
+                        // ファイルリストを更新
                     }
                     app.new_file_popup = false;
                 }
@@ -82,62 +89,125 @@ pub fn display_top_panel(app: &mut TxtEditorApp, ctx: &Context) {
     });
 }
 
+fn display_directory(ui: &mut egui::Ui, path: &PathBuf, app: &mut TxtEditorApp) {
+    if path.is_dir() {
+        let dir_name = path.file_name().unwrap().to_string_lossy().to_string();
+        let response = CollapsingHeader::new(dir_name.clone())
+            .default_open(false)
+            .show(ui, |ui| {
+                if let Ok(entries) = fs::read_dir(path) {
+                    for entry in entries.flatten() {
+                        display_directory(ui, &entry.path(), app);
+                    }
+                }
+            });
+
+        response.header_response.context_menu(|ui| {
+            if ui.button("Delete Directory").clicked() {
+                if let Err(err) = move_to_trash(path) {
+                    eprintln!("Failed to move directory to trash: {}", err);
+                } else {
+                    app.file_list.retain(|f| f != path);
+                    if let Some(root_dir) = &app.folder_path {
+                        app.file_list = get_txt_files_and_dirs_in_directory(root_dir.clone());
+                    }
+                }
+                ui.close_menu();
+            }
+        });
+
+        if response.header_response.clicked() {
+            app.selected_dir = Some(path.clone());
+        }
+    } else {
+        let file_name = path.file_name().unwrap().to_string_lossy().to_string();
+        let is_selected = Some(path) == app.selected_file.as_ref();
+        let label = if is_selected {
+            ui.colored_label(Color32::YELLOW, file_name)
+        } else {
+            ui.label(file_name)
+        };
+
+        if label.clicked() {
+            app.selected_file = Some(path.clone());
+            app.file_contents = std::fs::read_to_string(&path)
+                .unwrap_or_else(|_| "Failed to read file".to_string());
+            app.file_modified = false; // ファイルを選択したときは未編集とする
+        }
+
+        label.context_menu(|ui| {
+            if ui.button("Open in RightPanel").clicked() {
+                app.right_panel_file = Some(path.clone());
+                app.right_panel_contents = std::fs::read_to_string(&path)
+                    .unwrap_or_else(|_| "Failed to read file".to_string());
+                ui.close_menu();
+            }
+            if ui.button("Rename").clicked() {
+                // リネーム処理をここに追加
+                println!("Rename {}", path.display());
+                ui.close_menu();
+            }
+            if ui.button("Delete").clicked() {
+                if let Err(err) = move_to_trash(&path) {
+                    eprintln!("Failed to move file to trash: {}", err);
+                } else {
+                    app.file_list.retain(|f| f != path);
+                    if app.selected_file == Some(path.clone()) {
+                        app.selected_file = None;
+                        app.file_contents.clear();
+                    }
+                    if let Some(root_dir) = &app.folder_path {
+                        app.file_list = get_txt_files_and_dirs_in_directory(root_dir.clone());
+                        // ファイルリストを更新
+                    }
+                }
+                ui.close_menu();
+            }
+        });
+    }
+}
+
 pub fn display_side_panel(app: &mut TxtEditorApp, ctx: &Context) {
     eframe::egui::SidePanel::left("side_panel").show(ctx, |ui| {
         if let Some(ref folder_path) = app.folder_path {
             ui.label(format!("Directory: {}", folder_path.display()));
             ui.separator();
 
-            // ファイルリストを借用しているスコープを短くするために一時的なベクターを使用
-            let files: Vec<_> = app.file_list.iter().cloned().collect();
-            for file in files {
-                let file_name = file.file_name().unwrap().to_string_lossy();
-                let is_selected = Some(&file) == app.selected_file.as_ref();
+            // サブディレクトリの新規作成ボタンを追加
+            if ui.button("New Folder").clicked() {
+                app.new_folder_popup = true;
+            }
 
-                let label = if is_selected {
-                    ui.colored_label(Color32::YELLOW, file_name)
-                } else {
-                    ui.label(file_name)
-                };
+            if app.new_folder_popup {
+                egui::Window::new("Create New Folder").show(ctx, |ui| {
+                    ui.label("Enter new folder name:");
+                    ui.text_edit_singleline(&mut app.new_folder_name);
 
-                // 左クリックでファイルを選択
-                if label.clicked() {
-                    app.selected_file = Some(file.clone());
-                    app.file_contents = std::fs::read_to_string(&file)
-                        .unwrap_or_else(|_| "Failed to read file".to_string());
-                    app.file_modified = false; // ファイルを選択したときは未編集とする
-                }
-
-                // 右クリックメニューを追加
-                label.context_menu(|ui| {
-                    if ui.button("Open in RightPanel").clicked() {
-                        app.right_panel_file = Some(file.clone());
-                        app.right_panel_contents = std::fs::read_to_string(&file)
-                            .unwrap_or_else(|_| "Failed to read file".to_string());
-                        ui.close_menu();
-                    }
-                    if ui.button("Rename").clicked() {
-                        // リネーム処理をここに追加
-                        println!("Rename {}", file.display());
-                        ui.close_menu();
-                    }
-                    if ui.button("Delete").clicked() {
-                        if let Err(err) = move_to_trash(&file) {
-                            eprintln!("Failed to move file to trash: {}", err);
-                        } else {
-                            app.file_list.retain(|f| f != &file);
-                            if app.selected_file == Some(file.clone()) {
-                                app.selected_file = None;
-                                app.file_contents.clear();
-                            }
-                            if let Some(folder_path) = &app.folder_path {
-                                app.file_list = get_txt_files_in_directory(folder_path.clone());
-                                // ファイルリストを更新
+                    if ui.button("Create").clicked() {
+                        if let Some(selected_dir) = &app.selected_dir {
+                            let new_folder_path = selected_dir.join(&app.new_folder_name);
+                            if let Err(err) = std::fs::create_dir(&new_folder_path) {
+                                eprintln!("Failed to create folder: {}", err);
+                            } else {
+                                if let Some(root_dir) = &app.folder_path {
+                                    app.file_list =
+                                        get_txt_files_and_dirs_in_directory(root_dir.clone());
+                                }
                             }
                         }
-                        ui.close_menu();
+                        app.new_folder_popup = false;
+                    }
+
+                    if ui.button("Cancel").clicked() {
+                        app.new_folder_popup = false;
                     }
                 });
+            }
+
+            // ファイルリストとディレクトリリストをクローンして借用を解除
+            let paths = app.file_list.clone();
+            for path in paths {
+                display_directory(ui, &path, app);
             }
         }
     });

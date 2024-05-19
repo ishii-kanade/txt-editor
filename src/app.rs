@@ -5,6 +5,7 @@ use std::path::PathBuf;
 
 pub struct TxtEditorApp {
     pub folder_path: Option<PathBuf>,
+    pub selected_dir: Option<PathBuf>, // 追加
     pub file_list: Vec<PathBuf>,
     pub selected_file: Option<PathBuf>,
     pub file_contents: String,
@@ -16,12 +17,15 @@ pub struct TxtEditorApp {
     pub new_file_path: Option<PathBuf>,
     pub right_panel_file: Option<PathBuf>, // 追加
     pub right_panel_contents: String,      // 追加
+    pub new_folder_popup: bool,            // 追加
+    pub new_folder_name: String,           // 追加
 }
 
 impl Default for TxtEditorApp {
     fn default() -> Self {
         Self {
             folder_path: None,
+            selected_dir: None, // 追加
             file_list: Vec::new(),
             selected_file: None,
             file_contents: String::new(),
@@ -33,6 +37,8 @@ impl Default for TxtEditorApp {
             new_file_path: None,
             right_panel_file: None,              // 追加
             right_panel_contents: String::new(), // 追加
+            new_folder_popup: false,             // 追加
+            new_folder_name: String::new(),      // 追加
         }
     }
 }
