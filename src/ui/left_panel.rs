@@ -9,13 +9,13 @@ fn display_directory(ui: &mut egui::Ui, path: &PathBuf, app: &mut TxtEditorApp) 
         let dir_name = path.file_name().unwrap().to_string_lossy().to_string();
         let is_selected = Some(path) == app.selected_dir.as_ref();
 
-        let response = CollapsingHeader::new(if is_selected {
-            format!("[{}]", dir_name)
-        } else {
-            dir_name.clone()
-        })
-        .default_open(false)
-        .show(ui, |ui| {
+        let header = CollapsingHeader::new(dir_name.clone()).default_open(false);
+
+        if is_selected {
+            ui.style_mut().visuals.widgets.noninteractive.bg_fill = Color32::YELLOW;
+        }
+
+        let response = header.show(ui, |ui| {
             if let Ok(entries) = fs::read_dir(path) {
                 for entry in entries.flatten() {
                     let entry_path = entry.path();
@@ -27,6 +27,12 @@ fn display_directory(ui: &mut egui::Ui, path: &PathBuf, app: &mut TxtEditorApp) 
                 }
             }
         });
+
+        // Reset the background color after rendering the header
+        if is_selected {
+            ui.style_mut().visuals.widgets.noninteractive.bg_fill =
+                ui.visuals().widgets.noninteractive.bg_fill;
+        }
 
         response.header_response.context_menu(|ui| {
             if ui.button("Delete Directory").clicked() {
