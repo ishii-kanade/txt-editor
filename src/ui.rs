@@ -92,7 +92,7 @@ pub fn display_top_panel(app: &mut TxtEditorApp, ctx: &Context) {
 fn display_directory(ui: &mut egui::Ui, path: &PathBuf, app: &mut TxtEditorApp) {
     if path.is_dir() {
         let dir_name = path.file_name().unwrap().to_string_lossy().to_string();
-        CollapsingHeader::new(dir_name.clone())
+        let response = CollapsingHeader::new(dir_name.clone())
             .default_open(false)
             .show(ui, |ui| {
                 if let Ok(entries) = fs::read_dir(path) {
@@ -100,15 +100,25 @@ fn display_directory(ui: &mut egui::Ui, path: &PathBuf, app: &mut TxtEditorApp) 
                         display_directory(ui, &entry.path(), app);
                     }
                 }
-            })
-            .header_response
-            .on_hover_cursor(egui::CursorIcon::PointingHand)
-            .interact(egui::Sense::click())
-            .on_hover_text("Click to select this directory")
-            .clicked()
-            .then(|| {
-                app.selected_dir = Some(path.clone());
             });
+
+        response.header_response.context_menu(|ui| {
+            if ui.button("Delete Directory").clicked() {
+                if let Err(err) = move_to_trash(path) {
+                    eprintln!("Failed to move directory to trash: {}", err);
+                } else {
+                    app.file_list.retain(|f| f != path);
+                    if let Some(root_dir) = &app.folder_path {
+                        app.file_list = get_txt_files_and_dirs_in_directory(root_dir.clone());
+                    }
+                }
+                ui.close_menu();
+            }
+        });
+
+        if response.header_response.clicked() {
+            app.selected_dir = Some(path.clone());
+        }
     } else {
         let file_name = path.file_name().unwrap().to_string_lossy().to_string();
         let is_selected = Some(path) == app.selected_file.as_ref();
