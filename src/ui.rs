@@ -22,7 +22,19 @@ pub fn display_top_panel(app: &mut TxtEditorApp, ctx: &Context) {
             let add_file_shortcut =
                 ctx.input(|i| i.key_pressed(Key::A) && i.modifiers == Modifiers::CTRL);
             if ui.button("Add Text File").clicked() || add_file_shortcut {
-                if let Some(selected_dir) = &app.selected_dir {
+                if let Some(selected_file) = &app.selected_file {
+                    let parent_dir = selected_file.parent().unwrap_or(selected_file);
+                    let new_file_name = "new_file";
+                    let new_file_path = parent_dir.join(format!("{}.txt", new_file_name));
+                    std::fs::File::create(&new_file_path).expect("Failed to create file");
+                    app.new_file_popup = true;
+                    app.new_file_path = Some(new_file_path);
+                    app.new_file_name = new_file_name.to_string(); // Initialize with the default name
+                    if let Some(root_dir) = &app.folder_path {
+                        app.file_list = get_txt_files_and_dirs_in_directory(root_dir.clone());
+                    }
+                    // ファイルリストを更新
+                } else if let Some(selected_dir) = &app.selected_dir {
                     let new_file_name = "new_file";
                     let new_file_path = selected_dir.join(format!("{}.txt", new_file_name));
                     std::fs::File::create(&new_file_path).expect("Failed to create file");
@@ -97,7 +109,12 @@ fn display_directory(ui: &mut egui::Ui, path: &PathBuf, app: &mut TxtEditorApp) 
             .show(ui, |ui| {
                 if let Ok(entries) = fs::read_dir(path) {
                     for entry in entries.flatten() {
-                        display_directory(ui, &entry.path(), app);
+                        let entry_path = entry.path();
+                        if let Some(file_name) = entry_path.file_name() {
+                            if !file_name.to_string_lossy().starts_with('.') {
+                                display_directory(ui, &entry_path, app);
+                            }
+                        }
                     }
                 }
             });
@@ -121,49 +138,51 @@ fn display_directory(ui: &mut egui::Ui, path: &PathBuf, app: &mut TxtEditorApp) 
         }
     } else {
         let file_name = path.file_name().unwrap().to_string_lossy().to_string();
-        let is_selected = Some(path) == app.selected_file.as_ref();
-        let label = if is_selected {
-            ui.colored_label(Color32::YELLOW, file_name)
-        } else {
-            ui.label(file_name)
-        };
+        if !file_name.starts_with('.') {
+            let is_selected = Some(path) == app.selected_file.as_ref();
+            let label = if is_selected {
+                ui.colored_label(Color32::YELLOW, file_name)
+            } else {
+                ui.label(file_name)
+            };
 
-        if label.clicked() {
-            app.selected_file = Some(path.clone());
-            app.file_contents = std::fs::read_to_string(&path)
-                .unwrap_or_else(|_| "Failed to read file".to_string());
-            app.file_modified = false; // ファイルを選択したときは未編集とする
-        }
-
-        label.context_menu(|ui| {
-            if ui.button("Open in RightPanel").clicked() {
-                app.right_panel_file = Some(path.clone());
-                app.right_panel_contents = std::fs::read_to_string(&path)
+            if label.clicked() {
+                app.selected_file = Some(path.clone());
+                app.file_contents = std::fs::read_to_string(&path)
                     .unwrap_or_else(|_| "Failed to read file".to_string());
-                ui.close_menu();
+                app.file_modified = false; // ファイルを選択したときは未編集とする
             }
-            if ui.button("Rename").clicked() {
-                // リネーム処理をここに追加
-                println!("Rename {}", path.display());
-                ui.close_menu();
-            }
-            if ui.button("Delete").clicked() {
-                if let Err(err) = move_to_trash(&path) {
-                    eprintln!("Failed to move file to trash: {}", err);
-                } else {
-                    app.file_list.retain(|f| f != path);
-                    if app.selected_file == Some(path.clone()) {
-                        app.selected_file = None;
-                        app.file_contents.clear();
-                    }
-                    if let Some(root_dir) = &app.folder_path {
-                        app.file_list = get_txt_files_and_dirs_in_directory(root_dir.clone());
-                        // ファイルリストを更新
-                    }
+
+            label.context_menu(|ui| {
+                if ui.button("Open in RightPanel").clicked() {
+                    app.right_panel_file = Some(path.clone());
+                    app.right_panel_contents = std::fs::read_to_string(&path)
+                        .unwrap_or_else(|_| "Failed to read file".to_string());
+                    ui.close_menu();
                 }
-                ui.close_menu();
-            }
-        });
+                if ui.button("Rename").clicked() {
+                    // リネーム処理をここに追加
+                    println!("Rename {}", path.display());
+                    ui.close_menu();
+                }
+                if ui.button("Delete").clicked() {
+                    if let Err(err) = move_to_trash(&path) {
+                        eprintln!("Failed to move file to trash: {}", err);
+                    } else {
+                        app.file_list.retain(|f| f != path);
+                        if app.selected_file == Some(path.clone()) {
+                            app.selected_file = None;
+                            app.file_contents.clear();
+                        }
+                        if let Some(root_dir) = &app.folder_path {
+                            app.file_list = get_txt_files_and_dirs_in_directory(root_dir.clone());
+                            // ファイルリストを更新
+                        }
+                    }
+                    ui.close_menu();
+                }
+            });
+        }
     }
 }
 
