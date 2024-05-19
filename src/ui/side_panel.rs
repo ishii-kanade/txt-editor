@@ -1,6 +1,6 @@
 use crate::app::TxtEditorApp;
 use crate::file_operations::{get_txt_files_and_dirs_in_directory, move_to_trash};
-use eframe::egui::{self, CollapsingHeader, Color32, Context, ScrollArea, SidePanel};
+use eframe::egui::{self, CollapsingHeader, Color32, Context, SidePanel};
 use std::fs;
 use std::path::PathBuf;
 
@@ -9,28 +9,26 @@ fn display_directory(ui: &mut egui::Ui, path: &PathBuf, app: &mut TxtEditorApp) 
         let dir_name = path.file_name().unwrap().to_string_lossy().to_string();
         let is_selected = Some(path) == app.selected_dir.as_ref();
 
-        let response = CollapsingHeader::new(dir_name.clone())
-            .default_open(false)
-            .show(ui, |ui| {
-                if let Ok(entries) = fs::read_dir(path) {
-                    for entry in entries.flatten() {
-                        let entry_path = entry.path();
-                        if let Some(file_name) = entry_path.file_name() {
-                            if !file_name.to_string_lossy().starts_with('.') {
-                                display_directory(ui, &entry_path, app);
-                            }
+        let response = CollapsingHeader::new(if is_selected {
+            format!("[{}]", dir_name)
+        } else {
+            dir_name.clone()
+        })
+        .default_open(false)
+        .show(ui, |ui| {
+            if let Ok(entries) = fs::read_dir(path) {
+                for entry in entries.flatten() {
+                    let entry_path = entry.path();
+                    if let Some(file_name) = entry_path.file_name() {
+                        if !file_name.to_string_lossy().starts_with('.') {
+                            display_directory(ui, &entry_path, app);
                         }
                     }
                 }
-            });
+            }
+        });
 
-        let header = if is_selected {
-            ui.colored_label(Color32::YELLOW, &dir_name)
-        } else {
-            ui.label(&dir_name)
-        };
-
-        header.context_menu(|ui| {
+        response.header_response.context_menu(|ui| {
             if ui.button("Delete Directory").clicked() {
                 if let Err(err) = move_to_trash(path) {
                     eprintln!("Failed to move directory to trash: {}", err);
