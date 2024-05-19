@@ -18,7 +18,6 @@ pub fn display_top_panel(app: &mut TxtEditorApp, ctx: &Context) {
                 }
             }
 
-            // Control+A ショートカットをファイル追加に割り当てる
             let add_file_shortcut =
                 ctx.input(|i| i.key_pressed(Key::A) && i.modifiers == Modifiers::CTRL);
             if ui.button("Add Text File").clicked() || add_file_shortcut {
@@ -29,22 +28,20 @@ pub fn display_top_panel(app: &mut TxtEditorApp, ctx: &Context) {
                     std::fs::File::create(&new_file_path).expect("Failed to create file");
                     app.new_file_popup = true;
                     app.new_file_path = Some(new_file_path);
-                    app.new_file_name = new_file_name.to_string(); // Initialize with the default name
+                    app.new_file_name = new_file_name.to_string();
                     if let Some(root_dir) = &app.folder_path {
                         app.file_list = get_txt_files_and_dirs_in_directory(root_dir.clone());
                     }
-                    // ファイルリストを更新
                 } else if let Some(selected_dir) = &app.selected_dir {
                     let new_file_name = "new_file";
                     let new_file_path = selected_dir.join(format!("{}.txt", new_file_name));
                     std::fs::File::create(&new_file_path).expect("Failed to create file");
                     app.new_file_popup = true;
                     app.new_file_path = Some(new_file_path);
-                    app.new_file_name = new_file_name.to_string(); // Initialize with the default name
+                    app.new_file_name = new_file_name.to_string();
                     if let Some(root_dir) = &app.folder_path {
                         app.file_list = get_txt_files_and_dirs_in_directory(root_dir.clone());
                     }
-                    // ファイルリストを更新
                 }
             }
 
@@ -60,13 +57,11 @@ pub fn display_top_panel(app: &mut TxtEditorApp, ctx: &Context) {
                         if let Some(folder_path) = &app.folder_path {
                             app.file_list =
                                 get_txt_files_and_dirs_in_directory(folder_path.clone());
-                            // ファイルリストを更新
                         }
                     }
                 }
             }
 
-            // 文字数をカウントして表示
             let char_count = app.file_contents.chars().count();
             ui.label(format!("Character count: {}", char_count));
         });
@@ -88,7 +83,6 @@ pub fn display_top_panel(app: &mut TxtEditorApp, ctx: &Context) {
                         if let Some(root_dir) = &app.folder_path {
                             app.file_list = get_txt_files_and_dirs_in_directory(root_dir.clone());
                         }
-                        // ファイルリストを更新
                     }
                     app.new_file_popup = false;
                 }
@@ -150,7 +144,7 @@ fn display_directory(ui: &mut egui::Ui, path: &PathBuf, app: &mut TxtEditorApp) 
                 app.selected_file = Some(path.clone());
                 app.file_contents = std::fs::read_to_string(&path)
                     .unwrap_or_else(|_| "Failed to read file".to_string());
-                app.file_modified = false; // ファイルを選択したときは未編集とする
+                app.file_modified = false;
             }
 
             label.context_menu(|ui| {
@@ -161,7 +155,6 @@ fn display_directory(ui: &mut egui::Ui, path: &PathBuf, app: &mut TxtEditorApp) 
                     ui.close_menu();
                 }
                 if ui.button("Rename").clicked() {
-                    // リネーム処理をここに追加
                     println!("Rename {}", path.display());
                     ui.close_menu();
                 }
@@ -176,7 +169,6 @@ fn display_directory(ui: &mut egui::Ui, path: &PathBuf, app: &mut TxtEditorApp) 
                         }
                         if let Some(root_dir) = &app.folder_path {
                             app.file_list = get_txt_files_and_dirs_in_directory(root_dir.clone());
-                            // ファイルリストを更新
                         }
                     }
                     ui.close_menu();
@@ -192,7 +184,6 @@ pub fn display_side_panel(app: &mut TxtEditorApp, ctx: &Context) {
             ui.label(format!("Directory: {}", folder_path.display()));
             ui.separator();
 
-            // サブディレクトリの新規作成ボタンを追加
             if ui.button("New Folder").clicked() {
                 app.new_folder_popup = true;
             }
@@ -223,7 +214,6 @@ pub fn display_side_panel(app: &mut TxtEditorApp, ctx: &Context) {
                 });
             }
 
-            // ファイルリストとディレクトリリストをクローンして借用を解除
             let paths = app.file_list.clone();
             for path in paths {
                 display_directory(ui, &path, app);
@@ -239,12 +229,12 @@ pub fn display_central_panel(app: &mut TxtEditorApp, ctx: &Context) {
                 let response = ui.add(
                     TextEdit::multiline(&mut app.file_contents)
                         .font(egui::TextStyle::Monospace)
-                        .desired_rows(30) // 固定の行数を設定
-                        .desired_width(f32::INFINITY), // 横幅を最大化
+                        .desired_rows(30)
+                        .desired_width(f32::INFINITY),
                 );
 
                 if response.changed() {
-                    app.file_modified = true; // テキストが変更されたときにフラグを設定する
+                    app.file_modified = true;
                 }
             });
         }
