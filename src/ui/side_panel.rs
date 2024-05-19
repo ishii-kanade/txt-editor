@@ -7,6 +7,8 @@ use std::path::PathBuf;
 fn display_directory(ui: &mut egui::Ui, path: &PathBuf, app: &mut TxtEditorApp) {
     if path.is_dir() {
         let dir_name = path.file_name().unwrap().to_string_lossy().to_string();
+        let is_selected = Some(path) == app.selected_dir.as_ref();
+
         let response = CollapsingHeader::new(dir_name.clone())
             .default_open(false)
             .show(ui, |ui| {
@@ -22,7 +24,13 @@ fn display_directory(ui: &mut egui::Ui, path: &PathBuf, app: &mut TxtEditorApp) 
                 }
             });
 
-        response.header_response.context_menu(|ui| {
+        let header = if is_selected {
+            ui.colored_label(Color32::YELLOW, &dir_name)
+        } else {
+            ui.label(&dir_name)
+        };
+
+        header.context_menu(|ui| {
             if ui.button("Delete Directory").clicked() {
                 if let Err(err) = move_to_trash(path) {
                     eprintln!("Failed to move directory to trash: {}", err);
