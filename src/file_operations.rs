@@ -54,3 +54,13 @@ pub fn move_to_trash(path: &PathBuf) -> Result<(), String> {
 
     Ok(())
 }
+
+pub fn get_txt_files_and_dirs_in_directory(dir: PathBuf) -> Vec<PathBuf> {
+    let mut paths = vec![];
+    if let Ok(entries) = fs::read_dir(dir) {
+        for entry in entries.flatten() {
+            paths.push(entry.path());
+        }
+    }
+    paths
+}

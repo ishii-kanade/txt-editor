@@ -16,6 +16,8 @@ pub struct TxtEditorApp {
     pub new_file_path: Option<PathBuf>,
     pub right_panel_file: Option<PathBuf>, // 追加
     pub right_panel_contents: String,      // 追加
+    pub new_folder_popup: bool,            // 追加
+    pub new_folder_name: String,           // 追加
 }
 
 impl Default for TxtEditorApp {
@@ -33,6 +35,8 @@ impl Default for TxtEditorApp {
             new_file_path: None,
             right_panel_file: None,              // 追加
             right_panel_contents: String::new(), // 追加
+            new_folder_popup: false,             // 追加
+            new_folder_name: String::new(),      // 追加
         }
     }
 }
