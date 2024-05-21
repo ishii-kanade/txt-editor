@@ -2,12 +2,13 @@ use crate::app::TxtEditorApp;
 use crate::file_operations::{get_txt_files_and_dirs_in_directory, move_to_trash};
 use eframe::egui::{self, CollapsingHeader, Color32, Context, SidePanel};
 use std::fs;
+use std::io;
 use std::path::PathBuf;
 
 fn display_directory(ui: &mut egui::Ui, path: &PathBuf, app: &mut TxtEditorApp) {
     if path.is_dir() {
         let dir_name = path.file_name().unwrap().to_string_lossy().to_string();
-        let is_selected = Some(path) == app.selected_dir.as_ref();
+        let is_selected = Some(path) == app.selected_item.as_ref();
 
         let header = CollapsingHeader::new(dir_name.clone()).default_open(false);
 
@@ -46,22 +47,35 @@ fn display_directory(ui: &mut egui::Ui, path: &PathBuf, app: &mut TxtEditorApp) 
                 }
                 ui.close_menu();
             }
+            if ui.button("Rename").clicked() {
+                app.rename_popup = true;
+                app.rename_target = Some(path.clone());
+                // Remove .txt extension for display
+                if dir_name.ends_with(".txt") {
+                    app.new_name = dir_name.trim_end_matches(".txt").to_string();
+                } else {
+                    app.new_name = dir_name;
+                }
+                ui.close_menu();
+            }
         });
 
         if response.header_response.clicked() {
-            app.selected_dir = Some(path.clone());
+            app.selected_item = Some(path.clone());
+            app.selected_file = None; // フォルダを選択した場合、ファイルの選択を解除
         }
     } else {
         let file_name = path.file_name().unwrap().to_string_lossy().to_string();
         if !file_name.starts_with('.') {
-            let is_selected = Some(path) == app.selected_file.as_ref();
+            let is_selected = Some(path) == app.selected_item.as_ref();
             let label = if is_selected {
-                ui.colored_label(Color32::YELLOW, file_name)
+                ui.colored_label(Color32::YELLOW, file_name.clone())
             } else {
-                ui.label(file_name)
+                ui.label(file_name.clone())
             };
 
             if label.clicked() {
+                app.selected_item = Some(path.clone());
                 app.selected_file = Some(path.clone());
                 app.file_contents = std::fs::read_to_string(&path)
                     .unwrap_or_else(|_| "Failed to read file".to_string());
@@ -76,7 +90,14 @@ fn display_directory(ui: &mut egui::Ui, path: &PathBuf, app: &mut TxtEditorApp) 
                     ui.close_menu();
                 }
                 if ui.button("Rename").clicked() {
-                    println!("Rename {}", path.display());
+                    app.rename_popup = true;
+                    app.rename_target = Some(path.clone());
+                    // Remove .txt extension for display
+                    if file_name.ends_with(".txt") {
+                        app.new_name = file_name.trim_end_matches(".txt").to_string();
+                    } else {
+                        app.new_name = file_name;
+                    }
                     ui.close_menu();
                 }
                 if ui.button("Delete").clicked() {
@@ -99,26 +120,28 @@ fn display_directory(ui: &mut egui::Ui, path: &PathBuf, app: &mut TxtEditorApp) 
     }
 }
 
+fn rename_item(path: &PathBuf, new_name: &str) -> io::Result<()> {
+    let new_name_with_ext = format!("{}.txt", new_name);
+    let new_path = path.with_file_name(new_name_with_ext);
+    fs::rename(path, new_path)?;
+    Ok(())
+}
+
 pub fn display(app: &mut TxtEditorApp, ctx: &Context) {
     SidePanel::left("side_panel").show(ctx, |ui| {
         if let Some(ref folder_path) = app.folder_path {
             ui.label(format!("Directory: {}", folder_path.display()));
             ui.separator();
 
-            if ui.button("New Folder").clicked() {
-                app.new_folder_popup = true;
-            }
+            if app.rename_popup {
+                egui::Window::new("Rename").show(ctx, |ui| {
+                    ui.label("Enter new name (without extension):");
+                    ui.text_edit_singleline(&mut app.new_name);
 
-            if app.new_folder_popup {
-                egui::Window::new("Create New Folder").show(ctx, |ui| {
-                    ui.label("Enter new folder name:");
-                    ui.text_edit_singleline(&mut app.new_folder_name);
-
-                    if ui.button("Create").clicked() {
-                        if let Some(selected_dir) = &app.selected_dir {
-                            let new_folder_path = selected_dir.join(&app.new_folder_name);
-                            if let Err(err) = std::fs::create_dir(&new_folder_path) {
-                                eprintln!("Failed to create folder: {}", err);
+                    if ui.button("Rename").clicked() {
+                        if let Some(ref rename_target) = app.rename_target {
+                            if let Err(err) = rename_item(rename_target, &app.new_name) {
+                                eprintln!("Failed to rename item: {}", err);
                             } else {
                                 if let Some(root_dir) = &app.folder_path {
                                     app.file_list =
@@ -126,10 +149,10 @@ pub fn display(app: &mut TxtEditorApp, ctx: &Context) {
                                 }
                             }
                         }
-                        app.new_folder_popup = false;
+                        app.rename_popup = false;
                     }
                     if ui.button("Cancel").clicked() {
-                        app.new_folder_popup = false;
+                        app.rename_popup = false;
                     }
                 });
             }

@@ -19,6 +19,10 @@ pub struct TxtEditorApp {
     pub right_panel_contents: String,
     pub new_folder_popup: bool,
     pub new_folder_name: String,
+    pub rename_popup: bool,
+    pub rename_target: Option<PathBuf>,
+    pub new_name: String,
+    pub selected_item: Option<PathBuf>,
 }
 
 impl Default for TxtEditorApp {
@@ -39,6 +43,10 @@ impl Default for TxtEditorApp {
             right_panel_contents: String::new(),
             new_folder_popup: false,
             new_folder_name: String::new(),
+            rename_popup: false,
+            rename_target: None,
+            new_name: String::new(),
+            selected_item: None,
         }
     }
 }
