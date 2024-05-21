@@ -8,7 +8,7 @@ use std::path::PathBuf;
 fn display_directory(ui: &mut egui::Ui, path: &PathBuf, app: &mut TxtEditorApp) {
     if path.is_dir() {
         let dir_name = path.file_name().unwrap().to_string_lossy().to_string();
-        let is_selected = Some(path) == app.selected_dir.as_ref();
+        let is_selected = Some(path) == app.selected_item.as_ref();
 
         let header = CollapsingHeader::new(dir_name.clone()).default_open(false);
 
@@ -61,12 +61,13 @@ fn display_directory(ui: &mut egui::Ui, path: &PathBuf, app: &mut TxtEditorApp) 
         });
 
         if response.header_response.clicked() {
-            app.selected_dir = Some(path.clone());
+            app.selected_item = Some(path.clone());
+            app.selected_file = None; // フォルダを選択した場合、ファイルの選択を解除
         }
     } else {
         let file_name = path.file_name().unwrap().to_string_lossy().to_string();
         if !file_name.starts_with('.') {
-            let is_selected = Some(path) == app.selected_file.as_ref();
+            let is_selected = Some(path) == app.selected_item.as_ref();
             let label = if is_selected {
                 ui.colored_label(Color32::YELLOW, file_name.clone())
             } else {
@@ -74,6 +75,7 @@ fn display_directory(ui: &mut egui::Ui, path: &PathBuf, app: &mut TxtEditorApp) 
             };
 
             if label.clicked() {
+                app.selected_item = Some(path.clone());
                 app.selected_file = Some(path.clone());
                 app.file_contents = std::fs::read_to_string(&path)
                     .unwrap_or_else(|_| "Failed to read file".to_string());

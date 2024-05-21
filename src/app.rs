@@ -22,6 +22,7 @@ pub struct TxtEditorApp {
     pub rename_popup: bool,
     pub rename_target: Option<PathBuf>,
     pub new_name: String,
+    pub selected_item: Option<PathBuf>,
 }
 
 impl Default for TxtEditorApp {
@@ -45,6 +46,7 @@ impl Default for TxtEditorApp {
             rename_popup: false,
             rename_target: None,
             new_name: String::new(),
+            selected_item: None,
         }
     }
 }
