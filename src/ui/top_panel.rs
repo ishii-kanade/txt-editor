@@ -1,6 +1,5 @@
 use crate::app::TxtEditorApp;
-use crate::file_operations::get_txt_files_and_dirs_in_directory;
-use crate::file_operations::move_to_trash;
+use crate::file_operations::{get_txt_files_and_dirs_in_directory, move_to_trash};
 use eframe::egui::{self, Context, Key, Modifiers, TopBottomPanel};
 
 pub fn display(app: &mut TxtEditorApp, ctx: &Context) {
@@ -12,6 +11,35 @@ pub fn display(app: &mut TxtEditorApp, ctx: &Context) {
                     app.selected_dir = Some(path.clone());
                     app.file_list = get_txt_files_and_dirs_in_directory(path);
                 }
+            }
+
+            if ui.button("New Folder").clicked() {
+                app.new_folder_popup = true;
+            }
+
+            if app.new_folder_popup {
+                egui::Window::new("Create New Folder").show(ctx, |ui| {
+                    ui.label("Enter new folder name:");
+                    ui.text_edit_singleline(&mut app.new_folder_name);
+
+                    if ui.button("Create").clicked() {
+                        if let Some(selected_dir) = &app.selected_dir {
+                            let new_folder_path = selected_dir.join(&app.new_folder_name);
+                            if let Err(err) = std::fs::create_dir(&new_folder_path) {
+                                eprintln!("Failed to create folder: {}", err);
+                            } else {
+                                if let Some(root_dir) = &app.folder_path {
+                                    app.file_list =
+                                        get_txt_files_and_dirs_in_directory(root_dir.clone());
+                                }
+                            }
+                        }
+                        app.new_folder_popup = false;
+                    }
+                    if ui.button("Cancel").clicked() {
+                        app.new_folder_popup = false;
+                    }
+                });
             }
 
             let add_file_shortcut =
