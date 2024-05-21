@@ -50,7 +50,12 @@ fn display_directory(ui: &mut egui::Ui, path: &PathBuf, app: &mut TxtEditorApp) 
             if ui.button("Rename").clicked() {
                 app.rename_popup = true;
                 app.rename_target = Some(path.clone());
-                app.new_name = dir_name;
+                // Remove .txt extension for display
+                if dir_name.ends_with(".txt") {
+                    app.new_name = dir_name.trim_end_matches(".txt").to_string();
+                } else {
+                    app.new_name = dir_name;
+                }
                 ui.close_menu();
             }
         });
@@ -85,7 +90,12 @@ fn display_directory(ui: &mut egui::Ui, path: &PathBuf, app: &mut TxtEditorApp) 
                 if ui.button("Rename").clicked() {
                     app.rename_popup = true;
                     app.rename_target = Some(path.clone());
-                    app.new_name = file_name.clone();
+                    // Remove .txt extension for display
+                    if file_name.ends_with(".txt") {
+                        app.new_name = file_name.trim_end_matches(".txt").to_string();
+                    } else {
+                        app.new_name = file_name;
+                    }
                     ui.close_menu();
                 }
                 if ui.button("Delete").clicked() {
@@ -109,7 +119,8 @@ fn display_directory(ui: &mut egui::Ui, path: &PathBuf, app: &mut TxtEditorApp) 
 }
 
 fn rename_item(path: &PathBuf, new_name: &str) -> io::Result<()> {
-    let new_path = path.with_file_name(new_name);
+    let new_name_with_ext = format!("{}.txt", new_name);
+    let new_path = path.with_file_name(new_name_with_ext);
     fs::rename(path, new_path)?;
     Ok(())
 }
@@ -122,7 +133,7 @@ pub fn display(app: &mut TxtEditorApp, ctx: &Context) {
 
             if app.rename_popup {
                 egui::Window::new("Rename").show(ctx, |ui| {
-                    ui.label("Enter new name:");
+                    ui.label("Enter new name (without extension):");
                     ui.text_edit_singleline(&mut app.new_name);
 
                     if ui.button("Rename").clicked() {
