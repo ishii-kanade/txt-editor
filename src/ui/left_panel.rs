@@ -1,9 +1,10 @@
 use crate::app::TxtEditorApp;
 use crate::file_operations::{get_txt_files_and_dirs_in_directory, move_to_trash};
+use crate::ui::utils::add_text_file;
 use eframe::egui::{self, CollapsingHeader, Color32, Context, SidePanel};
 use std::fs;
 use std::io;
-use std::path::PathBuf;
+use std::path::{Path, PathBuf}; // インポートパスを修正
 
 fn display_directory(ui: &mut egui::Ui, path: &PathBuf, app: &mut TxtEditorApp) {
     if path.is_dir() {
@@ -56,6 +57,10 @@ fn display_directory(ui: &mut egui::Ui, path: &PathBuf, app: &mut TxtEditorApp) 
                 } else {
                     app.new_name = dir_name;
                 }
+                ui.close_menu();
+            }
+            if ui.button("Add Text File").clicked() {
+                add_text_file(app, path);
                 ui.close_menu();
             }
         });
@@ -114,6 +119,22 @@ fn display_directory(ui: &mut egui::Ui, path: &PathBuf, app: &mut TxtEditorApp) 
                         }
                     }
                     ui.close_menu();
+                }
+                if ui.button("Add Text File").clicked() {
+                    // selected_item を事前にコピーする
+                    let selected_item = app.selected_item.clone();
+                    if let Some(selected_item) = selected_item {
+                        let parent_dir = if selected_item.is_dir() {
+                            selected_item
+                        } else {
+                            selected_item
+                                .parent()
+                                .unwrap_or(&selected_item)
+                                .to_path_buf()
+                        };
+                        add_text_file(app, &parent_dir);
+                        ui.close_menu();
+                    }
                 }
             });
         }
