@@ -69,6 +69,32 @@ pub fn display(app: &mut TxtEditorApp, ctx: &Context) {
                 }
             }
 
+            if app.new_file_popup {
+                egui::Window::new("Rename New Text File").show(ctx, |ui| {
+                    ui.label("Enter new file name:");
+                    ui.text_edit_singleline(&mut app.new_file_name);
+
+                    if ui.button("Rename").clicked() {
+                        if let Some(ref new_file_path) = app.new_file_path {
+                            let parent_dir = new_file_path.parent().unwrap();
+                            let new_file_path_renamed =
+                                parent_dir.join(format!("{}.txt", app.new_file_name));
+                            std::fs::rename(new_file_path, &new_file_path_renamed)
+                                .expect("Failed to rename file");
+                            app.new_file_popup = false;
+                            app.new_file_path = Some(new_file_path_renamed);
+                            if let Some(root_dir) = &app.folder_path {
+                                app.file_list =
+                                    get_txt_files_and_dirs_in_directory(root_dir.clone());
+                            }
+                        }
+                    }
+                    if ui.button("Cancel").clicked() {
+                        app.new_file_popup = false;
+                    }
+                });
+            }
+
             let delete_file_shortcut = ctx.input(|i| i.key_pressed(Key::Delete));
             if let Some(ref selected_file) = app.selected_file {
                 if ui.button("Delete").clicked() || delete_file_shortcut {
